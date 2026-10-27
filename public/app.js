@@ -193,11 +193,24 @@
   }
 
   function fit() {
+    const stageWidth = $('#stage').clientWidth;
+    if (!stageWidth) return;
     const page = $('#invoice');
-    const scale = Math.min(1, ($('#stage').clientWidth - 32) / 794);
+    const scale = Math.min(1, (stageWidth - 32) / 794);
     page.style.transform = `scale(${scale})`;
     $('#frame').style.width = 794 * scale + 'px';
     $('#frame').style.height = page.offsetHeight * scale + 'px';
+  }
+
+  function setMobileView(view) {
+    const layout = $('.layout');
+    layout.dataset.view = view;
+    $$('.mobile-tabs button').forEach((button) => {
+      const active = button.dataset.mobileView === view;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    requestAnimationFrame(fit);
   }
 
   function updateAmounts(c = compute(state)) {
@@ -440,6 +453,9 @@
     $('#btnNew').addEventListener('click', startNew);
     $('#btnPdf').addEventListener('click', () => exportAs('pdf'));
     $('#btnJpeg').addEventListener('click', () => exportAs('jpeg'));
+    $$('.mobile-tabs button').forEach((button) => {
+      button.addEventListener('click', () => setMobileView(button.dataset.mobileView));
+    });
     window.addEventListener('resize', fit);
     window.addEventListener('beforeunload', (e) => {
       if (dirty) {

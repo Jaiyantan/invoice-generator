@@ -17,8 +17,13 @@
     </div>
   </header>
 
-  <main class="layout">
-    <aside class="panel">
+  <nav class="mobile-tabs" aria-label="Mobile workspace">
+    <button type="button" class="active" data-mobile-view="edit" aria-controls="editor" aria-pressed="true">Edit</button>
+    <button type="button" data-mobile-view="preview" aria-controls="stage" aria-pressed="false">Preview</button>
+  </nav>
+
+  <main class="layout" data-view="edit">
+    <aside class="panel" id="editor">
       <details open>
         <summary>Invoice details</summary>
         <div class="body">

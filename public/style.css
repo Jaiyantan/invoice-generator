@@ -56,9 +56,6 @@ button.icon { padding: 0 8px; line-height: 22px; font-size: 16px; }
 .summary div { display: flex; justify-content: space-between; }
 .summary .total { border-top: 1px solid #c5cad1; margin-top: 4px; padding-top: 6px; font-size: 15px; }
 
-.saved-row { display: flex; gap: 6px; margin-bottom: 6px; }
-.saved-row .open { flex: 1; text-align: left; display: grid; }
-.saved-row small { color: #6b7580; }
 .muted { color: #6b7580; margin: 0; }
 
 .toast {

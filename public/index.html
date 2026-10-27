@@ -12,7 +12,6 @@
     <h1>Invoice Generator</h1>
     <div class="actions">
       <button type="button" id="btnNew">New invoice</button>
-      <button type="button" id="btnSave">Save</button>
       <button type="button" id="btnJpeg">Download JPEG</button>
       <button type="button" id="btnPdf" class="primary">Download PDF</button>
     </div>
@@ -20,11 +19,6 @@
 
   <main class="layout">
     <aside class="panel">
-      <details>
-        <summary>Saved invoices</summary>
-        <div class="body"><div id="savedList"></div></div>
-      </details>
-
       <details open>
         <summary>Invoice details</summary>
         <div class="body">
@@ -51,12 +45,12 @@
       <details open>
         <summary>Billed to</summary>
         <div class="body">
-          <label>Name<input data-path="buyer.name" data-customer="buyer" list="customers" autocomplete="off"></label>
+          <label>Name<input data-path="buyer.name"></label>
           <label>Address<textarea rows="3" data-path="buyer.address"></textarea></label>
           <label>GSTIN<input data-path="buyer.gstin" data-gstin data-upper maxlength="15"></label>
           <label class="check"><input type="checkbox" data-path="sameAsBuyer"> Ship to the same address</label>
           <div id="consigneeFields" class="stack">
-            <label>Shipped to: name<input data-path="consignee.name" data-customer="consignee" list="customers" autocomplete="off"></label>
+            <label>Shipped to: name<input data-path="consignee.name"></label>
             <label>Address<textarea rows="3" data-path="consignee.address"></textarea></label>
             <label>GSTIN<input data-path="consignee.gstin" data-gstin data-upper maxlength="15"></label>
           </div>
@@ -67,10 +61,7 @@
         <summary>Items</summary>
         <div class="body">
           <div id="itemsEditor"></div>
-          <div class="two">
-            <button type="button" id="btnAddItem">+ Add item</button>
-            <select id="productPicker"><option value="">Add a previous item...</option></select>
-          </div>
+          <button type="button" id="btnAddItem">+ Add item</button>
         </div>
       </details>
 
@@ -120,7 +111,6 @@
   </main>
 </div>
 
-<datalist id="customers"></datalist>
 <div id="toast" class="toast" hidden></div>
 
 <script src="/vendor/html2canvas.js"></script>

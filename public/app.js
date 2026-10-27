@@ -23,11 +23,7 @@
 
   /* ---------- state ---------- */
   let state;
-  let saved = [];
-  let loadedId = null;
   let dirty = false;
-  const customers = new Map();
-  let products = [];
 
   const blankItem = () => ({ desc: '', hsn: '', qty: '', rate: '' });
   const blankParty = () => ({ name: '', address: '', gstin: '' });
@@ -49,15 +45,10 @@
     };
   }
 
-  function nextNumber() {
-    const nums = saved.map((i) => parseInt(i.meta && i.meta.no, 10)).filter((n) => Number.isFinite(n));
-    return String(nums.length ? Math.max(...nums) + 1 : 1);
-  }
-
   function newInvoice(seller) {
     const inv = blankInvoice();
     if (seller) inv.seller = { ...seller };
-    inv.meta.no = nextNumber();
+    inv.meta.no = '1';
     return inv;
   }
 
@@ -263,107 +254,9 @@
     el.title = bad ? 'This does not look like a valid 15 character GSTIN' : '';
   }
 
-  /* ---------- memory from saved invoices ---------- */
-  function rebuildMemory() {
-    customers.clear();
-    const seen = new Set();
-    products = [];
-    for (const inv of saved) {
-      const parties = [inv.buyer, inv.sameAsBuyer ? null : inv.consignee];
-      for (const p of parties) {
-        if (p && p.name && p.name.trim() && !customers.has(p.name.trim().toLowerCase())) {
-          customers.set(p.name.trim().toLowerCase(), p);
-        }
-      }
-      for (const it of inv.items || []) {
-        const key = (it.desc || '').trim().toLowerCase();
-        if (key && !seen.has(key)) {
-          seen.add(key);
-          products.push(it);
-        }
-      }
-    }
-    $('#customers').innerHTML = [...customers.values()].map((p) => `<option value="${esc(p.name)}"></option>`).join('');
-    $('#productPicker').innerHTML =
-      '<option value="">Add a previous item...</option>' +
-      products.map((p, i) => `<option value="${i}">${esc(p.desc.trim().replace(/\s*\n\s*/g, ' / '))}</option>`).join('');
-  }
-
-  function renderSaved() {
-    $('#savedList').innerHTML = saved.length
-      ? saved
-          .map((i) => {
-            const total = compute(normalize(i)).total;
-            return `<div class="saved-row" data-id="${esc(i.id)}">
-              <button type="button" class="open"><b>#${esc(i.meta.no)}</b> ${esc(i.buyer.name || 'No buyer name')}
-                <small>${fmtDate(i.meta.date)} &middot; Rs ${fmtMoney(total)}</small></button>
-              <button type="button" class="icon" data-act="rm" title="Delete">&times;</button></div>`;
-          })
-          .join('')
-      : '<p class="muted">Nothing saved yet.</p>';
-  }
-
-  /* ---------- server ---------- */
-  async function request(url, opts) {
-    const res = await fetch(url, opts);
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || res.statusText);
-    return body;
-  }
-
-  async function reloadSaved() {
-    saved = await request('/api/invoices');
-    rebuildMemory();
-    renderSaved();
-  }
-
-  async function save() {
-    const no = state.meta.no.trim();
-    if (!no) return toast('Enter an invoice number first', true);
-    const id = slug(no);
-    if (saved.some((i) => i.id === id) && id !== loadedId && !confirm(`Invoice ${no} already exists. Overwrite it?`)) return;
-    try {
-      const r = await request('/api/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(state),
-      });
-      loadedId = r.id;
-      dirty = false;
-      await reloadSaved();
-      toast(`Saved invoice ${no}`);
-    } catch (e) {
-      toast('Save failed: ' + e.message, true);
-    }
-  }
-
-  function openSaved(id) {
-    const inv = saved.find((i) => i.id === id);
-    if (!inv || (dirty && !confirm('Discard unsaved changes?'))) return;
-    state = normalize(structuredClone(inv));
-    loadedId = id;
-    dirty = false;
-    fillForm();
-    refresh();
-    writeDraft();
-  }
-
-  async function removeSaved(id) {
-    const inv = saved.find((i) => i.id === id);
-    if (!inv || !confirm(`Delete invoice ${inv.meta.no}? This cannot be undone.`)) return;
-    try {
-      await request('/api/invoices/' + encodeURIComponent(id), { method: 'DELETE' });
-      if (loadedId === id) loadedId = null;
-      await reloadSaved();
-    } catch (e) {
-      toast('Delete failed: ' + e.message, true);
-    }
-  }
-
   function startNew() {
     if (dirty && !confirm('Discard unsaved changes?')) return;
     state = newInvoice(state.seller);
-    loadedId = null;
     dirty = false;
     fillForm();
     refresh();
@@ -374,7 +267,7 @@
   let draftTimer;
   function writeDraft() {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ state, loadedId, dirty }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ state, dirty }));
     } catch {
       /* storage full or unavailable */
     }
@@ -395,6 +288,9 @@
 
   /* ---------- export ---------- */
   async function capture() {
+    if (typeof window.html2canvas !== 'function') {
+      throw new Error('The image export library did not load. Reload the page and try again.');
+    }
     const host = document.createElement('div');
     host.className = 'page export-host';
     host.innerHTML = pageInner(state, compute(state));
@@ -499,16 +395,6 @@
       });
     });
 
-    $$('[data-customer]').forEach((el) =>
-      el.addEventListener('change', () => {
-        const hit = customers.get(el.value.trim().toLowerCase());
-        if (!hit) return;
-        Object.assign(state[el.dataset.customer], { name: hit.name, address: hit.address, gstin: hit.gstin });
-        fillForm();
-        changed();
-      })
-    );
-
     const editor = $('#itemsEditor');
     editor.addEventListener('input', (e) => {
       const f = e.target.dataset.f;
@@ -535,17 +421,6 @@
       $('textarea', rows[rows.length - 1]).focus();
     });
 
-    $('#productPicker').addEventListener('change', (e) => {
-      const p = products[+e.target.value];
-      e.target.value = '';
-      if (!p) return;
-      const last = state.items[state.items.length - 1];
-      const target = !last.desc && !last.hsn && last.qty === '' && last.rate === '' ? last : state.items[state.items.push(blankItem()) - 1];
-      Object.assign(target, { desc: p.desc, hsn: p.hsn, rate: p.rate });
-      renderItemsEditor();
-      changed();
-    });
-
     $('#logoFile').addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -562,24 +437,10 @@
       changed();
     });
 
-    $('#savedList').addEventListener('click', (e) => {
-      const row = e.target.closest('.saved-row');
-      if (!row) return;
-      if (e.target.closest('[data-act="rm"]')) removeSaved(row.dataset.id);
-      else if (e.target.closest('.open')) openSaved(row.dataset.id);
-    });
-
     $('#btnNew').addEventListener('click', startNew);
-    $('#btnSave').addEventListener('click', save);
     $('#btnPdf').addEventListener('click', () => exportAs('pdf'));
     $('#btnJpeg').addEventListener('click', () => exportAs('jpeg'));
     window.addEventListener('resize', fit);
-    window.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        save();
-      }
-    });
     window.addEventListener('beforeunload', (e) => {
       if (dirty) {
         e.preventDefault();
@@ -589,19 +450,13 @@
   }
 
   /* ---------- start ---------- */
-  async function init() {
-    try {
-      await reloadSaved();
-    } catch {
-      toast('Could not reach the server, saved invoices are unavailable', true);
-    }
+  function init() {
     const draft = readDraft();
     if (draft && draft.state) {
       state = normalize(draft.state);
-      loadedId = draft.loadedId || null;
       dirty = !!draft.dirty;
     } else {
-      state = newInvoice(saved[0] && normalize(saved[0]).seller);
+      state = newInvoice();
     }
     bind();
     fillForm();

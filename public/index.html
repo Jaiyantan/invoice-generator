@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice Generator</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <h1>Invoice Generator</h1>
+    <div class="actions">
+      <button type="button" id="btnNew">New invoice</button>
+      <button type="button" id="btnSave">Save</button>
+      <button type="button" id="btnJpeg">Download JPEG</button>
+      <button type="button" id="btnPdf" class="primary">Download PDF</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <details>
+        <summary>Saved invoices</summary>
+        <div class="body"><div id="savedList"></div></div>
+      </details>
+
+      <details open>
+        <summary>Invoice details</summary>
+        <div class="body">
+          <div class="two">
+            <label>Invoice No.<input data-path="meta.no"></label>
+            <label>Date<input type="date" data-path="meta.date"></label>
+          </div>
+          <label>Copy label
+            <select data-path="meta.copy">
+              <option>ORIGINAL FOR BUYER</option>
+              <option>DUPLICATE FOR TRANSPORTER</option>
+              <option>TRIPLICATE FOR SUPPLIER</option>
+              <option value="">(none)</option>
+            </select>
+          </label>
+          <label>Supplier's Ref.<input data-path="meta.ref"></label>
+          <div class="two">
+            <label>Despatched through<input data-path="meta.through"></label>
+            <label>Destination<input data-path="meta.dest"></label>
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Billed to</summary>
+        <div class="body">
+          <label>Name<input data-path="buyer.name" data-customer="buyer" list="customers" autocomplete="off"></label>
+          <label>Address<textarea rows="3" data-path="buyer.address"></textarea></label>
+          <label>GSTIN<input data-path="buyer.gstin" data-gstin data-upper maxlength="15"></label>
+          <label class="check"><input type="checkbox" data-path="sameAsBuyer"> Ship to the same address</label>
+          <div id="consigneeFields" class="stack">
+            <label>Shipped to: name<input data-path="consignee.name" data-customer="consignee" list="customers" autocomplete="off"></label>
+            <label>Address<textarea rows="3" data-path="consignee.address"></textarea></label>
+            <label>GSTIN<input data-path="consignee.gstin" data-gstin data-upper maxlength="15"></label>
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Items</summary>
+        <div class="body">
+          <div id="itemsEditor"></div>
+          <div class="two">
+            <button type="button" id="btnAddItem">+ Add item</button>
+            <select id="productPicker"><option value="">Add a previous item...</option></select>
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>GST and totals</summary>
+        <div class="body">
+          <label>Tax type
+            <select data-path="tax.type">
+              <option value="intra">Same state (CGST + SGST)</option>
+              <option value="inter">Other state (IGST)</option>
+            </select>
+          </label>
+          <label>GST rate %<input type="number" step="any" min="0" data-path="tax.rate"></label>
+          <label class="check"><input type="checkbox" data-path="tax.roundTax"> Round each tax amount to the nearest rupee</label>
+          <div id="summary" class="summary"></div>
+        </div>
+      </details>
+
+      <details>
+        <summary>Your business</summary>
+        <div class="body">
+          <label>Business name<input data-path="seller.name"></label>
+          <label>Address<textarea rows="3" data-path="seller.address"></textarea></label>
+          <label>Email<input data-path="seller.email"></label>
+          <div class="two">
+            <label>Phone<input data-path="seller.phone"></label>
+            <label>GSTIN<input data-path="seller.gstin" data-gstin data-upper maxlength="15"></label>
+          </div>
+          <label>Logo
+            <input type="file" id="logoFile" accept="image/*">
+          </label>
+          <button type="button" id="logoClear">Remove logo</button>
+        </div>
+      </details>
+
+      <details>
+        <summary>Declaration</summary>
+        <div class="body">
+          <label>Text<textarea rows="3" data-path="declaration"></textarea></label>
+        </div>
+      </details>
+    </aside>
+
+    <section class="stage" id="stage">
+      <div id="frame"><div id="invoice" class="page"></div></div>
+    </section>
+  </main>
+</div>
+
+<datalist id="customers"></datalist>
+<div id="toast" class="toast" hidden></div>
+
+<script src="/vendor/html2canvas.js"></script>
+<script src="/vendor/jspdf.js"></script>
+<script src="/calc.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
